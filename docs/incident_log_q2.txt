@@ -1,0 +1,16 @@
+# Nhật ký sự cố hệ thống Q2 2025
+
+Tổng số incident theo cluster trong Q2 2025:
+- Cluster Alpha: 3 incident (2 minor, 1 major)
+- Cluster Beta: 7 incident (5 minor, 2 major)
+- Cluster Gamma: 12 incident (8 minor, 4 major)
+
+Cluster Gamma ghi nhận số lượng incident CAO NHẤT trong Q2 2025.
+
+Chi tiết incident đáng chú ý tại Cluster Gamma:
+- INC-2025-047: LogParser-4B timeout hàng loạt, ảnh hưởng đội DevOps, thời gian khắc phục 4 giờ.
+- INC-2025-051: AlertClassifier-2B trả kết quả sai nhãn do data drift, ảnh hưởng toàn đội DevOps.
+- INC-2025-063: Cluster Gamma mất kết nối storage 2 giờ, ảnh hưởng tất cả model trong cluster.
+- INC-2025-071: LogParser-4B OOM khi xử lý log batch lớn, downtime 1.5 giờ.
+
+Đội DevOps là đội chịu ảnh hưởng nhiều nhất từ các incident tại Cluster Gamma trong Q2.

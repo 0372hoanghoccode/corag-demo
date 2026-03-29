@@ -1,0 +1,23 @@
+# Thống kê sử dụng model theo đội ngũ (Q2 2025)
+
+Tóm tắt: Đội DevOps sử dụng LogParser-4B nhiều nhất. Đội Backend Engineering sử dụng CodeAssist-13B nhiều nhất. Đội Frontend Engineering sử dụng CodeAssist-7B nhiều nhất. Đội ML Engineering sử dụng SumBot-3B nhiều nhất.
+
+Đội Backend Engineering:
+- Model chính: CodeAssist-13B (78% request)
+- Model phụ: CodeAssist-7B (22% request)
+- Tổng request/ngày: ~4.200
+
+Đội Frontend Engineering:
+- Model chính: CodeAssist-7B (65% request)
+- Model phụ: DocGen-7B (35% request)
+- Tổng request/ngày: ~1.800
+
+Đội DevOps:
+- Model chính: LogParser-4B (55% request)
+- Model phụ: AlertClassifier-2B (45% request)
+- Tổng request/ngày: ~2.100
+
+Đội ML Engineering:
+- Model chính: SumBot-3B (60% request)
+- Model phụ: DocGen-7B (40% request)
+- Tổng request/ngày: ~900

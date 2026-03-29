@@ -1,0 +1,15 @@
+# Benchmark hiệu năng Q2 2025 (tháng 4–6/2025) — BÁO CÁO MỚI NHẤT
+
+Kết quả đo lường hiệu năng quý 2 sau tối ưu hạ tầng — ĐÂY LÀ SỐ LIỆU CHÍNH THỨC HIỆN TẠI.
+
+- DocGen-7B: latency P95 = 620ms, tỷ lệ lỗi = 0.3%
+- SumBot-3B: latency P95 = 290ms, tỷ lệ lỗi = 0.2%
+- CodeAssist-13B: latency P95 = 860ms, tỷ lệ lỗi = 0.6%
+- CodeAssist-7B: latency P95 = 420ms, tỷ lệ lỗi = 0.3%
+- LogParser-4B: latency P95 = 890ms, tỷ lệ lỗi = 2.1%
+- AlertClassifier-2B: latency P95 = 180ms, tỷ lệ lỗi = 0.1%
+
+Model có latency P95 cao nhất toàn hệ thống theo Q2: LogParser-4B với 890ms.
+
+Ghi chú: LogParser-4B tăng latency mạnh từ 550ms (Q1) lên 890ms (Q2) do tăng kích thước batch xử lý.
+Số liệu này thay thế hoàn toàn benchmark Q1 cho mọi báo cáo hiện tại.

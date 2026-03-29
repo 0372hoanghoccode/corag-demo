@@ -1,0 +1,13 @@
+# Benchmark hiệu năng Q1 2025 (tháng 1–3/2025)
+
+Kết quả đo lường hiệu năng quý 1 — số liệu này ĐÃ LỖI THỜI, chỉ dùng để tham khảo lịch sử.
+
+- DocGen-7B: latency P95 = 680ms, tỷ lệ lỗi = 0.4%
+- SumBot-3B: latency P95 = 310ms, tỷ lệ lỗi = 0.2%
+- CodeAssist-13B: latency P95 = 920ms, tỷ lệ lỗi = 0.8%
+- CodeAssist-7B: latency P95 = 440ms, tỷ lệ lỗi = 0.3%
+- LogParser-4B: latency P95 = 550ms, tỷ lệ lỗi = 0.9%
+- AlertClassifier-2B: latency P95 = 190ms, tỷ lệ lỗi = 0.1%
+
+Ghi chú: Số liệu Q1 phản ánh hiệu năng TRƯỚC khi tối ưu hạ tầng Cluster Beta và TRƯỚC khi tăng batch size tại Cluster Gamma.
+Mọi đánh giá hiện tại phải dùng benchmark Q2 2025.

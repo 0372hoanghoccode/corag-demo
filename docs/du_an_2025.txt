@@ -1,0 +1,27 @@
+# Kế hoạch dự án năm 2025
+
+Dự án của Trần Văn Đức:
+- Tên dự án: Gamma Upgrade 2025
+- Mục tiêu: Nâng cấp Cluster Gamma lên Kubernetes 1.29, tối ưu GPU scheduling
+- KPI: Giảm 50% số lượng incident tại Cluster Gamma so với Q2 2025
+- Deadline: Tháng 9/2025
+- Giai đoạn hiện tại: Đang thiết kế kiến trúc mới (phase 1/3)
+- Trần Văn Đức là người phụ trách trực tiếp model LogParser-4B thuộc Cluster Gamma.
+
+Dự án của Nguyễn Minh Khoa:
+- Tên dự án: CoRAG Optimization 2025
+- Mục tiêu: Tối ưu CoRAG cho câu hỏi đa bước, giảm 30% số lần truy xuất dư thừa
+- KPI: Tăng recall câu hỏi 2-hop và 3-hop lên 95%
+- Deadline: Tháng 12/2025
+
+Dự án của Phạm Thị Lan:
+- Tên dự án: DocGen Enhancement
+- Mục tiêu: Cải thiện chất lượng tài liệu sinh ra từ DocGen-7B
+- KPI: Tăng BLEU score từ 0.42 lên 0.55
+- Deadline: Tháng 6/2025 — ĐÃ HOÀN THÀNH
+
+Dự án của Hoàng Quốc Bảo:
+- Tên dự án: Benchmark Automation
+- Mục tiêu: Tự động hóa toàn bộ quy trình benchmark hàng tuần
+- KPI: Giảm 80% thời gian chạy benchmark thủ công
+- Deadline: Tháng 8/2025

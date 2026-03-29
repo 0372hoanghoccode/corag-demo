@@ -1,0 +1,21 @@
+# Hạ tầng các Cluster VietAI Platform
+
+Tóm tắt phụ trách: Lê Thị Hoa phụ trách Cluster Alpha. Nguyễn Minh Khoa phụ trách Cluster Beta. Trần Văn Đức phụ trách Cluster Gamma.
+
+Cluster Alpha:
+- Nền tảng: Kubernetes 1.29
+- Cấu hình: 8 node (2 control-plane, 6 worker)
+- GPU: 4x NVIDIA A100 40GB
+- Phụ trách: Lê Thị Hoa
+
+Cluster Beta:
+- Nền tảng: Kubernetes 1.29
+- Cấu hình: 12 node (3 control-plane, 9 worker)
+- GPU: 8x NVIDIA A100 80GB
+- Phụ trách: Nguyễn Minh Khoa
+
+Cluster Gamma:
+- Nền tảng: Kubernetes 1.28 (đang lên kế hoạch nâng cấp lên 1.29)
+- Cấu hình: 6 node (2 control-plane, 4 worker)
+- GPU: 2x NVIDIA V100 32GB
+- Phụ trách: Trần Văn Đức

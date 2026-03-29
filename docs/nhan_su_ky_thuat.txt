@@ -1,0 +1,16 @@
+# Nhân sự kỹ thuật VietAI Platform
+
+Ai là người phụ trách model LogParser-4B? Trần Văn Đức. Deadline dự án Gamma Upgrade 2025 của Trần Văn Đức là tháng 9/2025.
+
+Đội Platform Engineering:
+- Trưởng nhóm: Lê Thị Hoa — phụ trách toàn bộ hạ tầng và Cluster Alpha
+- Nguyễn Minh Khoa — kiến trúc sư hệ thống, phụ trách Cluster Beta và model CodeAssist-13B
+- Trần Văn Đức — kỹ sư hạ tầng, phụ trách Cluster Gamma, model LogParser-4B và AlertClassifier-2B; deadline dự án Gamma Upgrade 2025 là tháng 9/2025.
+
+Đội ML Engineering:
+- Phạm Thị Lan — lead ML, phụ trách model DocGen-7B và SumBot-3B
+- Hoàng Quốc Bảo — phụ trách model CodeAssist-7B và quy trình benchmark hàng tuần
+
+Đội Backend Engineering: gồm 12 người, sử dụng Cluster Beta là chủ yếu.
+Đội Frontend Engineering: gồm 8 người, sử dụng Cluster Alpha là chủ yếu.
+Đội DevOps: gồm 5 người, sử dụng Cluster Gamma là chủ yếu.

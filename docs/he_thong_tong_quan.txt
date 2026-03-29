@@ -1,0 +1,9 @@
+# Tổng quan hệ thống VietAI Platform
+
+VietAI Platform là nền tảng AI nội bộ phục vụ toàn bộ kỹ sư tại VietTech Corp.
+Hệ thống gồm 3 cluster chính: Cluster Alpha, Cluster Beta và Cluster Gamma.
+Mỗi cluster phụ trách một nhóm model riêng biệt và phục vụ các đội ngũ kỹ thuật khác nhau.
+
+Platform được thiết kế để hỗ trợ tác vụ lập trình, phân tích log và sinh tài liệu kỹ thuật.
+Toàn bộ hệ thống được giám sát bởi đội Platform Engineering.
+Số lượng request trung bình toàn hệ thống: khoảng 9.000 request/ngày.

@@ -1,0 +1,15 @@
+# Danh mục model VietAI Platform
+
+Cluster Alpha:
+- DocGen-7B: model sinh tài liệu kỹ thuật, 7 tỷ tham số, trạng thái: production
+- SumBot-3B: model tóm tắt văn bản, 3 tỷ tham số, trạng thái: production
+
+Cluster Beta:
+- CodeAssist-13B: model hỗ trợ lập trình phức tạp, 13 tỷ tham số, trạng thái: production
+- CodeAssist-7B: model gợi ý code nhanh, 7 tỷ tham số, trạng thái: production
+
+Cluster Gamma:
+- LogParser-4B: model phân tích log hệ thống, 4 tỷ tham số, trạng thái: beta
+- AlertClassifier-2B: model phân loại cảnh báo tự động, 2 tỷ tham số, trạng thái: production
+
+Model lớn nhất toàn hệ thống tính theo số tham số: CodeAssist-13B với 13 tỷ tham số.
