@@ -35,6 +35,14 @@ def _get_cached_llm(provider: str):
     return create_llm(provider)
 
 
+def _resolve_embedding_provider(llm_provider: str) -> str:
+    if llm_provider == "openai":
+        return "openai"
+    if os.getenv("OPENAI_API_KEY"):
+        return "openai"
+    return "huggingface"
+
+
 def _init_state() -> None:
     defaults = {
         "question": "",
@@ -47,16 +55,25 @@ def _init_state() -> None:
         "run_mode": "CoRAG only",
         "corag_live_steps": [],
         "persist_directory": "",
+        "embedding_provider": "",
     }
     for key, value in defaults.items():
         if key not in st.session_state:
             st.session_state[key] = value
 
 
-def _get_persist_directory() -> str:
+def _get_persist_directory(provider: str) -> str:
     persist_directory = st.session_state.get("persist_directory", "")
+    selected_provider = provider or "huggingface"
+    if st.session_state.get("embedding_provider", "") != selected_provider:
+        st.session_state["embedding_provider"] = selected_provider
+        st.session_state["persist_directory"] = ""
+        st.session_state["indexed_chunks"] = 0
+        st.session_state["retriever_version"] = st.session_state.get("retriever_version", 0) + 1
+        persist_directory = ""
+
     if not persist_directory:
-        persist_directory = str(Path(DEFAULT_PERSIST_DIR) / f"session-{uuid.uuid4().hex}")
+        persist_directory = str(Path(DEFAULT_PERSIST_DIR) / f"{selected_provider}-session-{uuid.uuid4().hex}")
         st.session_state["persist_directory"] = persist_directory
     Path(persist_directory).mkdir(parents=True, exist_ok=True)
     return persist_directory
@@ -250,8 +267,8 @@ def _run_corag_once(
         retriever=retriever,
         llm=llm,
         max_steps=max_steps,
-        first_step_k=max(2, retrieval_k - 2),
-        step_k=max(2, retrieval_k - 1),
+        first_step_k=max(3, retrieval_k),
+        step_k=max(3, retrieval_k),
         use_llm_part_decomposition=False,
         enable_candidate_generation=False,
         step_callback=step_callback,
@@ -259,26 +276,28 @@ def _run_corag_once(
     return result, time.perf_counter() - start
 
 
-def _index_available_docs(uploaded_files) -> int:
+def _index_available_docs(uploaded_files, llm_provider: str) -> int:
     """Index docs folder plus current uploads and return indexed chunk count."""
+    embedding_provider = _resolve_embedding_provider(llm_provider)
     docs_from_folder = load_documents_from_docs_folder(str(PROJECT_ROOT / "docs"))
     docs_from_upload = load_documents_from_uploads(uploaded_files)
     total_docs = docs_from_folder + docs_from_upload
     if not total_docs:
         return 0
 
-    persist_directory = _get_persist_directory()
-    total_indexed = index_documents(total_docs, provider="huggingface", persist_directory=persist_directory)
+    persist_directory = _get_persist_directory(embedding_provider)
+    total_indexed = index_documents(total_docs, provider=embedding_provider, persist_directory=persist_directory)
     st.session_state["indexed_chunks"] = total_indexed
     st.session_state["retriever_version"] = st.session_state.get("retriever_version", 0) + 1
     return total_indexed
 
 
-def _rebuild_vectorstore(uploaded_files) -> int:
-    st.session_state["persist_directory"] = str(Path(DEFAULT_PERSIST_DIR) / f"session-{uuid.uuid4().hex}")
+def _rebuild_vectorstore(uploaded_files, llm_provider: str) -> int:
+    embedding_provider = _resolve_embedding_provider(llm_provider)
+    st.session_state["persist_directory"] = str(Path(DEFAULT_PERSIST_DIR) / f"{embedding_provider}-session-{uuid.uuid4().hex}")
     st.session_state["indexed_chunks"] = 0
     st.session_state["retriever_version"] = st.session_state.get("retriever_version", 0) + 1
-    return _index_available_docs(uploaded_files)
+    return _index_available_docs(uploaded_files, llm_provider)
 
 
 def _needs_collection_rebuild(result: Dict[str, Any] | None) -> bool:
@@ -294,6 +313,7 @@ def _run_with_collection_retry(
     retriever,
     llm,
     uploaded_files,
+    provider,
     *args,
     **kwargs,
 ):
@@ -301,11 +321,11 @@ def _run_with_collection_retry(
     if not _needs_collection_rebuild(result):
         return result, retriever, False
 
-    rebuilt_chunks = _rebuild_vectorstore(uploaded_files)
+    rebuilt_chunks = _rebuild_vectorstore(uploaded_files, provider)
     st.info(f"Đã rebuild ChromaDB từ docs/ ({rebuilt_chunks} chunks) và chạy lại.")
     retriever = _get_cached_retriever(
         k=kwargs.get("step_k", 3) if run_fn is run_corag else kwargs.get("retrieval_k", 3),
-        provider="huggingface",
+        provider=_resolve_embedding_provider(provider),
         _version=st.session_state.get("retriever_version", 0),
     )
     result = run_fn(question, retriever, llm, *args, **kwargs)
@@ -327,6 +347,7 @@ def main() -> None:
     with st.sidebar:
         st.header("Thiết lập demo")
         provider = st.selectbox("Model provider", ["auto", "groq", "gemini", "openai"], index=0)
+        embedding_provider = _resolve_embedding_provider(provider)
         st.session_state["question"] = st.text_area("Nhập câu hỏi", value=st.session_state["question"], height=120)
         max_steps = st.slider("max_steps cho CoRAG", min_value=1, max_value=6, value=5)
         retrieval_k = st.slider("k documents mỗi lần retrieve", min_value=2, max_value=5, value=3)
@@ -341,7 +362,7 @@ def main() -> None:
 
         if st.button("Upload tài liệu", use_container_width=True):
             try:
-                total_indexed = _index_available_docs(uploaded_files)
+                total_indexed = _index_available_docs(uploaded_files, provider)
                 st.success(f"Index thành công {total_indexed} chunks vào ChromaDB.")
             except Exception as exc:
                 st.error(f"Không thể index tài liệu: {exc}")
@@ -365,7 +386,7 @@ def main() -> None:
 
             if st.session_state.get("indexed_chunks", 0) == 0:
                 try:
-                    total_indexed = _index_available_docs(uploaded_files)
+                    total_indexed = _index_available_docs(uploaded_files, provider)
                     if total_indexed > 0:
                         st.info(f"Tự động index {total_indexed} chunks từ docs/ trước khi chạy demo.")
                 except Exception as exc:
@@ -381,20 +402,20 @@ def main() -> None:
                 st.caption(f"LLM đang dùng: {describe_llm(llm)}")
                 retriever = _get_cached_retriever(
                     k=retrieval_k,
-                    provider="huggingface",
-                    persist_directory=_get_persist_directory(),
+                    provider=embedding_provider,
+                    persist_directory=_get_persist_directory(embedding_provider),
                     _version=st.session_state.get("retriever_version", 0),
                 )
             except Exception as exc:
                 message = str(exc)
                 if "does not exist" in message or "Error getting collection" in message:
                     try:
-                        rebuilt_chunks = _rebuild_vectorstore(uploaded_files)
+                        rebuilt_chunks = _rebuild_vectorstore(uploaded_files, provider)
                         st.info(f"Đã rebuild ChromaDB từ docs/ ({rebuilt_chunks} chunks).")
                         retriever = _get_cached_retriever(
                             k=retrieval_k,
-                            provider="huggingface",
-                            persist_directory=_get_persist_directory(),
+                            provider=embedding_provider,
+                            persist_directory=_get_persist_directory(embedding_provider),
                             _version=st.session_state.get("retriever_version", 0),
                         )
                     except Exception as rebuild_exc:
@@ -443,12 +464,12 @@ def main() -> None:
                     with st.spinner("RAG đang chạy..."):
                         rag_result, rag_time = _run_rag_once(question, retriever, llm)
                         if _needs_collection_rebuild(rag_result):
-                            rebuilt_chunks = _rebuild_vectorstore(uploaded_files)
+                            rebuilt_chunks = _rebuild_vectorstore(uploaded_files, provider)
                             st.info(f"Đã rebuild ChromaDB từ docs/ ({rebuilt_chunks} chunks) và chạy lại RAG.")
                             retriever = _get_cached_retriever(
                                 k=retrieval_k,
-                                provider="huggingface",
-                                persist_directory=_get_persist_directory(),
+                                provider=embedding_provider,
+                                persist_directory=_get_persist_directory(embedding_provider),
                                 _version=st.session_state.get("retriever_version", 0),
                             )
                             rag_result, rag_time = _run_rag_once(question, retriever, llm)
@@ -468,12 +489,12 @@ def main() -> None:
                         )
 
                         if _needs_collection_rebuild(corag_result):
-                            rebuilt_chunks = _rebuild_vectorstore(uploaded_files)
+                            rebuilt_chunks = _rebuild_vectorstore(uploaded_files, provider)
                             st.info(f"Đã rebuild ChromaDB từ docs/ ({rebuilt_chunks} chunks) và chạy lại CoRAG.")
                             retriever = _get_cached_retriever(
                                 k=retrieval_k,
-                                provider="huggingface",
-                                persist_directory=_get_persist_directory(),
+                                provider=embedding_provider,
+                                persist_directory=_get_persist_directory(embedding_provider),
                                 _version=st.session_state.get("retriever_version", 0),
                             )
                             st.session_state["corag_live_steps"] = []

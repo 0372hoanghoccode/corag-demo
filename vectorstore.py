@@ -18,6 +18,10 @@ from langchain_huggingface import HuggingFaceEmbeddings
 DEFAULT_COLLECTION = "corag_demo"
 PROJECT_ROOT = Path(__file__).resolve().parent
 DEFAULT_PERSIST_DIR = str(Path.home() / ".cache" / "corag-demo" / "chroma_db")
+DEFAULT_HF_EMBEDDING_MODEL = os.getenv(
+    "HF_EMBEDDING_MODEL",
+    "sentence-transformers/paraphrase-multilingual-mpnet-base-v2",
+)
 
 
 @lru_cache(maxsize=4)
@@ -35,7 +39,7 @@ def get_embeddings(provider: str = "huggingface") -> Optional[object]:
 
     if selected in {"huggingface", "auto"}:
         try:
-            return HuggingFaceEmbeddings(model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+            return HuggingFaceEmbeddings(model_name=DEFAULT_HF_EMBEDDING_MODEL)
         except Exception:
             # Fallback path: if local HF dependencies are missing, prefer OpenAI when configured.
             if os.getenv("OPENAI_API_KEY"):
@@ -103,6 +107,6 @@ def get_retriever(
             embedding_function=embeddings,
             persist_directory=str(Path(persist_directory)),
         )
-        return db.as_retriever(search_kwargs={"k": int(k)})
+        return db.as_retriever(search_kwargs={"k": max(1, int(k))})
     except Exception as exc:
         raise RuntimeError(f"Failed to create retriever: {exc}") from exc

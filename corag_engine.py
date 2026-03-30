@@ -6,11 +6,15 @@ import re
 import unicodedata
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
-MAX_REQUIRED_PARTS = 5
+MAX_REQUIRED_PARTS = 4
 
 
 def _split_required_parts(question: str, max_parts: int = MAX_REQUIRED_PARTS) -> List[str]:
-    parts = [piece.strip() for piece in re.split(r"\svà\s|,", question) if piece.strip()]
+    parts: List[str] = []
+    for piece in re.split(r"\svà\s|,", question):
+        normalized = piece.strip()
+        if normalized and normalized not in parts:
+            parts.append(normalized)
     return parts[:max_parts]
 
 
@@ -101,7 +105,7 @@ Trả về JSON:
 
 
 def _evaluate_context(question: str, required_parts: List[str], context: str, llm) -> Tuple[Dict[str, Any], int]:
-    # Hard mode: only skip the evaluator when every required part is covered with very high confidence.
+    # Hard mode, but do not force the evaluator into an impossible loop when the corpus is noisy.
     if context.strip():
         covered = _parts_covered_by_context(required_parts, context)
         if covered >= len(required_parts) and len(required_parts) <= 2:
@@ -134,8 +138,11 @@ Context đã thu thập:
 {context}
 
 Đánh giá NGHIÊM KHẮC:
+0) Ưu tiên chính xác ngữ nghĩa khẳng định/phủ định/điều kiện: MUST, MUST NOT, KHÔNG, CẤM, CHỈ KHI, UNLESS, ngoại lệ.
+    - Nếu context có dữ kiện nhưng đảo nghĩa (ví dụ phủ định thành khẳng định, hoặc bỏ sót điều kiện UNLESS), coi như CHƯA COVERED.
+    - Nếu có mâu thuẫn giữa các chunk, ưu tiên chunk cụ thể hơn (đúng chủ thể, điều kiện, thời điểm) và nêu rõ mâu thuẫn trong evidence.
 1) Với TỪNG vế trong danh sách bắt buộc, cho biết đã có dữ kiện cụ thể trong context chưa.
-2) Chỉ trả "sufficient": true khi TẤT CẢ các vế có evidence rõ ràng.
+2) Chỉ trả "sufficient": true khi TẤT CẢ các vế có evidence rõ ràng, nhưng nếu PDF bị nhiễu thì vẫn chấp nhận evidence suy luận từ các chunk lân cận hoặc tiêu đề bảng.
 3) Nếu còn thiếu, liệt kê missing_parts đúng theo tên vế còn thiếu.
 4) Nếu chưa đủ, tạo đúng MỘT sub-query tập trung vào phần thiếu quan trọng nhất.
 
@@ -220,16 +227,47 @@ def _is_sufficient(
             return True
 
     if llm_says_sufficient and len(required_parts) > 2:
+        covered = _parts_covered_by_context(required_parts, context_text)
+        coverage_ratio = covered / max(1, len(required_parts))
+        if coverage_ratio >= 0.75 and not has_missing:
+            return True
         return False
 
     # Last fallback: check lexical overlap if the LLM signaled sufficiency but evidence was missing.
     covered = _parts_covered_by_context(required_parts, context_text)
-    return covered >= len(required_parts)
+    return covered >= len(required_parts) or (len(required_parts) > 2 and covered / max(1, len(required_parts)) >= 0.8 and not has_missing)
 
 
 def _fallback_sub_query(question: str, missing_parts: List[str]) -> str:
     focus = "; ".join(missing_parts[:2]) if missing_parts else "phần thông tin còn thiếu"
     return f"Tìm dữ kiện cụ thể để trả lời: {focus}. Câu hỏi gốc: {question}"
+
+
+def _is_sub_query_intent_aligned(query: str, missing_parts: List[str]) -> bool:
+    if not query.strip() or not missing_parts:
+        return True
+
+    query_tokens = set(re.findall(r"\w+", _normalize_text(query)))
+    missing_tokens = set(re.findall(r"\w+", _normalize_text(" ".join(missing_parts))))
+
+    if not query_tokens or not missing_tokens:
+        return True
+
+    # Keep the selected sub-query anchored to the missing intent.
+    intent_rules = [
+        ({"anh", "huong", "incident"}, {"anh", "huong", "incident"}),
+        ({"deadline", "thang", "han", "chot"}, {"deadline", "thang", "han", "chot"}),
+        ({"phu", "trach"}, {"phu", "trach"}),
+        ({"su", "dung"}, {"su", "dung"}),
+        ({"cluster"}, {"cluster"}),
+    ]
+
+    for trigger_tokens, required_tokens in intent_rules:
+        if missing_tokens.intersection(trigger_tokens):
+            if not query_tokens.intersection(required_tokens):
+                return False
+
+    return True
 
 
 def _generate_sub_query_candidates(
@@ -471,6 +509,9 @@ def run_corag(
                         continue
                     if normalized == current_query or normalized in seen_queries:
                         rejected_queries.append({"query": normalized, "reason": "duplicate"})
+                        continue
+                    if not _is_sub_query_intent_aligned(normalized, missing_parts):
+                        rejected_queries.append({"query": normalized, "reason": "intent_mismatch"})
                         continue
 
                     preview_docs = _retrieve_docs(retriever, normalized, k_override=step_k)
