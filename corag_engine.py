@@ -105,6 +105,7 @@ Trả về JSON:
 
 
 def _evaluate_context(question: str, required_parts: List[str], context: str, llm) -> Tuple[Dict[str, Any], int]:
+    # Fast-path: câu hỏi ngắn và context đã phủ đủ thì bỏ qua một lượt gọi LLM evaluator.
     # Hard mode, but do not force the evaluator into an impossible loop when the corpus is noisy.
     if context.strip():
         covered = _parts_covered_by_context(required_parts, context)
@@ -204,6 +205,7 @@ def _is_sufficient(
     context_text: str,
     embeddings: Optional[Any] = None,
 ) -> bool:
+    # Nếu chưa có context thì tuyệt đối không được kết luận đủ dữ kiện.
     if not has_context:
         return False
 
@@ -212,8 +214,8 @@ def _is_sufficient(
     missing_parts = eval_result.get("missing_parts", [])
     has_missing = isinstance(missing_parts, list) and any(str(item).strip() for item in missing_parts)
 
-    # Only trust a bare LLM sufficiency signal for short questions.
-    # Multi-hop questions must still show concrete evidence before stopping.
+    # Chỉ tin tín hiệu "sufficient=true" thuần từ LLM cho câu hỏi ngắn.
+    # Multi-hop bắt buộc phải có dấu hiệu evidence đủ mạnh mới dừng.
     if llm_says_sufficient and not has_missing and len(required_parts) <= 2:
         return True
 
@@ -277,6 +279,7 @@ def _generate_sub_query_candidates(
     llm,
     max_candidates: int = 3,
 ) -> List[str]:
+    # Sinh vài sub-query thay thế để tăng cơ hội tìm đúng mảnh thông tin còn thiếu.
     missing_serialized = "\n".join(f"- {part}" for part in missing_parts) if missing_parts else "- Chưa rõ"
     prompt = f"""
 Bạn đang thực hiện iterative retrieval cho câu hỏi gốc:
@@ -333,6 +336,7 @@ def _candidate_score(
     missing_parts: List[str],
     embeddings: Optional[Any] = None,
 ) -> int:
+    # Ưu tiên candidate tạo ra nhiều tài liệu mới; sau đó mới xét mức khớp với missing parts.
     score = float(len(gain_docs) * 100)
     if not missing_parts:
         return int(score)
@@ -366,6 +370,7 @@ def _rerank_context(question: str, context_pool: List[str], top_n: int = 6) -> L
     if not q_tokens:
         return context_pool[:top_n]
 
+    # Trộn lexical overlap và recency để giữ cả độ liên quan lẫn thông tin mới.
     scored: List[Tuple[float, int, str]] = []
     for idx, chunk in enumerate(context_pool):
         c_tokens = set(re.findall(r"\w+", _normalize_text(chunk)))
@@ -430,6 +435,7 @@ def run_corag(
             use_llm=use_llm_part_decomposition,
         )
 
+        # Vòng lặp CoRAG: retrieve -> evaluate -> chọn sub-query -> lặp lại tới khi đủ hoặc chạm max_steps.
         for step in range(1, max_steps + 1):
             k_for_step = first_step_k if step == 1 else step_k
             if step_callback is not None:
@@ -448,6 +454,7 @@ def run_corag(
                     }
                 )
 
+            # Tái sử dụng preview docs của candidate thắng để tránh retrieve lặp lại ngay bước kế tiếp.
             if pending_query == current_query and pending_docs is not None:
                 docs = pending_docs
                 pending_query = None
@@ -481,6 +488,7 @@ def run_corag(
 
             sub_query = eval_result.get("sub_query")
 
+            # selected_sub_query là truy vấn duy nhất được chọn cho bước sau.
             selected_sub_query: Optional[str] = None
             rejected_queries: List[Dict[str, str]] = []
             best_preview_docs = None
@@ -502,6 +510,7 @@ def run_corag(
                         if candidate not in candidate_queries:
                             candidate_queries.append(candidate)
 
+                # Chấm điểm tất cả candidate và giữ candidate có gain tốt nhất.
                 scored_candidates: List[Tuple[int, str, Any]] = []
                 for candidate in candidate_queries:
                     normalized = candidate.strip()
@@ -540,6 +549,7 @@ def run_corag(
                         selected_sub_query = None
                         best_preview_docs = None
 
+                # Không có candidate đạt chuẩn thì rơi về truy vấn fallback theo missing parts.
                 if not selected_sub_query:
                     fallback_query = _fallback_sub_query(question, missing_parts).strip()
                     if fallback_query and fallback_query not in seen_queries and fallback_query != current_query:
@@ -563,6 +573,7 @@ def run_corag(
             if step_callback is not None:
                 step_callback(step_entry)
 
+            # Dừng sớm khi evaluator xác nhận đã đủ evidence cho mọi vế bắt buộc.
             if sufficient:
                 break
 
@@ -583,6 +594,7 @@ def run_corag(
                 )
 
             normalized_query = str(selected_sub_query).strip() if selected_sub_query else ""
+            # Dừng an toàn nếu không còn sub-query hợp lệ để đi tiếp.
             if not normalized_query:
                 break
             if normalized_query in seen_queries:
